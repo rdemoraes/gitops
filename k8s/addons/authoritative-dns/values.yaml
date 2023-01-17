@@ -1,0 +1,73 @@
+replicaCount: 1
+region: ORD1
+name: authoritative-dns
+image:
+  image: internetsystemsconsortium/bind9
+  pullPolicy: IfNotPresent
+  tag: 9.19
+
+imageConfig:
+  pullPolicy: IfNotPresent
+
+service:
+  type: NodePort
+  port: 53
+  targetPort: 53
+  labels:
+
+# resources:
+#   requests:
+#     memory: 1Gi
+#     cpu: 300m
+
+readinessProbe:
+  enabled: true
+livenessProbe:
+  enabled: true
+
+bindzones:
+  kub3r.io: |
+      $TTL    604800
+      @       IN      SOA     ns1.kub3r.io. admin.kub3r.io. (
+                                    5         ; Serial
+                               604800         ; Refresh
+                                86400         ; Retry
+                              2419200         ; Expire
+                               604800 )       ; Negative Cache TTL
+      ;
+      kub3r.io.       IN      NS      ns1.kub3r.io.
+      kub3r.io.       IN      NS      ns2.kub3r.io.
+      ns1             IN      A       10.24.0.11
+      ns2             IN      A       10.24.0.12
+
+bindconfig:
+  named.conf: |
+    options {
+            directory "/var/cache/bind";
+            listen-on port 53 { any; };
+            auth-nxdomain yes;
+            forwarders { 
+                    185.228.168.9; 
+                    185.228.169.9; 
+            };
+            listen-on-v6 { ::1; };
+            allow-recursion {
+                    none;
+            };
+            allow-transfer {
+                    none;
+            };
+            allow-update {
+                    none;
+            };
+    };
+
+    zone "kub3r.io" {
+      type master;
+      file "/var/lib/bind/kub3r.io";
+    };
+
+zoneconfigs:
+  items:                 
+  - key: kub3r.io
+    path: kub3r.io
